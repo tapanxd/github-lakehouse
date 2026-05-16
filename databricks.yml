@@ -26,6 +26,7 @@ targets:
   dev:
     mode: development
     default: true
+    cluster_id: 0515-023655-enc70ake
     variables:
       catalog_name: main
       schema_name: gh_lakehouse

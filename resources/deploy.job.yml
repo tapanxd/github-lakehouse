@@ -8,7 +8,18 @@ resources:
       tags:
         environment: ${bundle.target}
         data_product: ${bundle.name}
-      performance_target: PERFORMANCE_OPTIMIZED
+      job_clusters:
+        - job_cluster_key: main_cluster
+          new_cluster:
+            node_type_id: Standard_D4as_v5
+            num_workers: 0
+            spark_version: 15.4.x-scala2.12
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*]
+              fs.azure.account.key.ghlakehousestorage.dfs.core.windows.net: "{{secrets/gh-lakehouse-scope/ghlakehousestorage-key1}}"
+            custom_tags:
+              ResourceClass: SingleNode
       trigger:
         periodic:
           interval: 1
@@ -16,6 +27,7 @@ resources:
 
       tasks:
         - task_key: bronze_autoloader
+          job_cluster_key: main_cluster
           max_retries: 1
           notebook_task:
             notebook_path: ../src/gh_archive/bronze_autoloader.py
@@ -26,13 +38,14 @@ resources:
           pipeline_task:
             pipeline_id: ${resources.pipelines.dlt_silver.id}
 
-        # - task_key: gold_dlt
-        #   depends_on:
-        #     - task_key: silver_dlt
-        #   pipeline_task:
-        #     pipeline_id: ${resources.pipelines.dlt_gold.id}
+        - task_key: gold_dlt
+          depends_on:
+            - task_key: silver_dlt
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.dlt_gold.id}
 
         # - task_key: cost_monitor
+        #   job_cluster_key: main_cluster
         #   depends_on:
         #     - task_key: gold_dlt
         #   max_retries: 0
