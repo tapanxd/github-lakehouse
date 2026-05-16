@@ -1,24 +1,19 @@
-# 💡 Additional resource specifications can be found at https://learn.microsoft.com/en-us/azure/databricks/dev-tools/bundles/resources
 resources:
   pipelines:
     dlt_gold:
-      name: ${bundle.name}_pipeline_gold_${bundle.target}
-      catalog: ${var.catalog_name}
+      name: ${bundle.name}_gold_${bundle.target}
+      schema: gh_lakehouse
+      storage: abfss://gold@ghlakehousestorage.dfs.core.windows.net/
       serverless: true
-      schema: ${bundle.name}
+      continuous: false
+      channel: CURRENT
+      photon: true
       libraries:
         - notebook:
-            path: ../src/signal_strength_summary/dlt.gold.py
-        - notebook:
-            path: ../src/cell_tower_sessions/dlt.gold.py
+            path: ../src/gh_archive/gold_dlt.py
+
       configuration:
-        # Required base configurations
         bundle.sourcePath: ${workspace.file_path}/src
         dltparam.environment: ${bundle.target}
-        dltparam.domain_name: ${var.domain_name}
-        dltparam.catalog_name: ${var.catalog_name}
-        dltparam.data_product_name: ${bundle.name}
-        dltparam.bronze_schema_name: ${bundle.name}_bronze
-        dltparam.silver_schema_name: ${bundle.name}_silver
-        dltparam.gold_schema_name: ${bundle.name}
-        dltparam.layer: gold
+        dltparam.silver_table: silver_gh_events
+        dltparam.gold_path: abfss://gold@ghlakehousestorage.dfs.core.windows.net/
