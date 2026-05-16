@@ -1,0 +1,216 @@
+# This file specifies the job for our Data Product
+# All aspects are provided as an example and a template
+# Before deploying to a client environment, ensure all template/example content is removed and that the job matches client requirements
+# 💡 Additional resource specifications can be found at https://learn.microsoft.com/en-us/azure/databricks/dev-tools/bundles/resources
+resources:
+  jobs:
+    deploy_job:
+      name: ${bundle.name} Job - ${bundle.target}
+      description: |
+        Handles catalog and schema creation, data generation, Delta Live Tables pipeline runs, contract testing, lakehouse monitor deployment, and Unity Catalog metadata updates for ${bundle.name} in ${bundle.target}.
+      tags:
+        # 💡 Add more tags here as is appropriate for your use case
+        environment: ${bundle.target}
+        data_product: ${bundle.name}
+        domain: ${var.domain_name}
+        catalog: ${var.domain_name}_${bundle.target}
+      # Use PERFORMANCE_OPTIMIZED to iterate quickly in development with small amounts of data, or for performance sensitive workloads.
+      # Use STANDARD for cost-sensitive workloads. Cluster spin-up takes ~10 minutes.
+      performance_target: PERFORMANCE_OPTIMIZED
+      # ⚠️ This budget policy is created manually; see README.md ⚠️
+      trigger:
+        periodic:
+          interval: 7
+          unit: DAYS
+
+      environments:
+        - environment_key: env_version_4
+          spec:
+            environment_version: "4"
+            
+      # 💡 Add further tasks here, or customize the ones provided 
+      tasks:
+        # 💡 Unit tests are important because they catch issues before we run expensive workloads
+        # ✅ This allows for fast iteration
+
+        # - task_key: dim_calendar_script
+        #   max_retries: 0
+        #   notebook_task:
+        #     notebook_path: ../src/dim_calendar/dim_calendar.py
+
+        - task_key: taxi_unit_tests
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../src/taxi/unit_tests.py
+
+        - task_key: stateful_streaming
+          max_retries: 0
+          environment_key: env_version_4
+          notebook_task:
+            notebook_path: ../src/stateful_streaming/fin_stateful_stream.py
+            
+
+        - task_key: pdf_generate_example
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../src/pdf_creation/create_pdf.py
+
+        - task_key: streaming_custom_datasource_api
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../src/custom_datasource/weather_stream_api.py
+
+        - task_key: signal_strength_summary_tests
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../src/signal_strength_summary/unit_tests.py
+
+        - task_key: cell_tower_sessions_tests
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../src/cell_tower_sessions/unit_tests.py
+
+        - task_key: autoloader
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../src/autoloader/autoload_generate.py
+
+        # Copies the data contract to a volume where it is accessible by consumers
+        - task_key: copy_contract_to_volume
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../src/copy_contract_to_volume.py
+
+        # 💡 Data generation can allow us to begin work for a client before we're in their environment
+        # ✅ Use this to accelerate time-to-delivery and initial iteration rounds while an engagement is being set up
+        - task_key: generate_signal_strength
+          max_retries: 0
+          depends_on:
+            - task_key: autoloader
+            - task_key: signal_strength_summary_tests
+            - task_key: cell_tower_sessions_tests
+            - task_key: pdf_generate_example
+            - task_key: streaming_custom_datasource_api
+            - task_key: stateful_streaming
+          notebook_task:
+            notebook_path: ../src/signal_strength_summary/datagen.py
+
+        - task_key: generate_cell_tower_sessions
+          max_retries: 0
+          depends_on:
+            - task_key: autoloader
+            - task_key: signal_strength_summary_tests
+            - task_key: cell_tower_sessions_tests
+          notebook_task:
+            notebook_path: ../src/cell_tower_sessions/datagen.py
+
+        - task_key: generate_cell_site_info
+          max_retries: 0
+          depends_on:
+            - task_key: autoloader
+            - task_key: signal_strength_summary_tests
+            - task_key: cell_tower_sessions_tests
+          notebook_task:
+            notebook_path: ../src/cell_site_info/datagen.py
+
+        - task_key: autoloader_loop
+          depends_on:
+            - task_key: autoloader
+            - task_key: signal_strength_summary_tests
+            - task_key: cell_tower_sessions_tests
+          for_each_task:
+            inputs: "[\"clearance_data\",\"admin_data\"]"
+            concurrency: 2
+            task:
+                task_key: autoloader_loop_item
+                notebook_task:
+                  base_parameters:
+                      table_name: "{{input}}"
+                  notebook_path: ../src/autoloader/autoload.py
+
+        # 💡 Every data product has bronze, silver, and gold layers
+        # 🕸️ https://learn.microsoft.com/en-us/azure/databricks/lakehouse/medallion
+        # ⬆️ Replace the code generation scripts above with actual data once you're in the client environment to form your bronze layer
+        # ⬇️ Silver and gold layers can go in Delta Live Tables as demonstrated below
+        - task_key: silver_dlt
+          depends_on:
+            - task_key: generate_signal_strength
+            - task_key: generate_cell_tower_sessions
+            - task_key: generate_cell_site_info
+            - task_key: autoloader_loop
+            - task_key: taxi_unit_tests
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.dlt_silver.id}
+
+        - task_key: gold_dlt
+          depends_on:
+            - task_key: silver_dlt
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.dlt_gold.id}
+
+        # 💡 Contract tests allow us to verify that our data product is true to its data contract
+        # ⚛️ This lets others do work using your data product asynchronously, and allows our clients to scale
+        # ✅ Make sure your contract aligns with business needs and realities. The more we can programatically test this, the more confidently we can release new versions.
+        - task_key: datacontract_test_task
+          max_retries: 0
+          depends_on:
+            - task_key: gold_dlt
+          notebook_task:
+            notebook_path: ../src/datacontract_test.py
+
+        # 💡 This runs some generated code from scripts/uc_datacontract.py to annotate Unity Catalog with properties from our datacontract.yml
+        - task_key: unity_catalog_contract_import
+          max_retries: 0
+          depends_on:
+            - task_key: gold_dlt
+          notebook_task:
+            notebook_path: ../src/contract_to_unitycatalog.py
+        # 💡 This creates a basic lakehouse monitoring job for your data quality.
+        # ✅ This can help to catch issues that your unit tests and contract tests might miss.
+        - task_key: lakehouse_monitoring
+          depends_on:
+            - task_key: gold_dlt
+          notebook_task:
+            notebook_path: ../src/signal_strength_summary/create_quality_monitor.py
+        
+        - task_key: create_benchmark_tables
+          max_retries: 0
+          notebook_task: 
+            notebook_path: ../src/benchmark/data_setup.py
+
+        - task_key: collect_metrics
+          max_retries: 0
+          depends_on:
+            - task_key: create_benchmark_tables
+          notebook_task:
+            notebook_path: ../src/benchmark/collect_metrics.py
+
+        - task_key: remediation_framework
+          max_retries: 0
+          run_job_task:
+            job_id: ${resources.jobs.remediation_framework_job.id}
+            
+      parameters:
+        # 💡 Parameterize as much as possible.
+        # Variables should live in databricks.yml so that it becomes a centralized configuration for your data product.
+        - name: environment
+          default: ${bundle.target}
+        - name: data_product_name
+          default: ${bundle.name}
+        - name: domain_name
+          default: ${var.domain_name}
+        - name: catalog_name
+          default: ${var.catalog_name}
+        - name: bronze_schema_name
+          default: ${bundle.name}_bronze
+        - name: silver_schema_name
+          default: ${bundle.name}_silver
+        - name: gold_schema_name
+          default: ${bundle.name}
+        - name: benchmark_usage_metrics
+          default: ${var.benchmark_usage_metrics}
+        - name: benchmark_logs_tbl
+          default: ${var.benchmark_logs_tbl}
+        - name: benchmark_task_type
+          default: ${var.benchmark_task_type}
+        

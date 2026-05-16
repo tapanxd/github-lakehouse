@@ -1,0 +1,45 @@
+bundle:
+  name: github_lakehouse
+  uuid: 7405605123541603-gh-lakehouse
+
+include:
+  - resources/*.yml
+
+variables:
+  domain_name:
+    description: The name of the domain where the data product belongs.
+    default: github
+  catalog_name:
+    description: The name of the catalog being deployed to.
+    default: ${var.domain_name}_${bundle.target}
+  schema_name:
+    description: The name of the schema being deployed to.
+    default: gh_lakehouse
+  repository:
+    description: The git repository for the deployed asset.
+  git_ref_name:
+    description: The git ref_name for the deployed asset.
+
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      catalog_name: main
+      schema_name: gh_lakehouse
+    workspace:
+      host: https://adb-7405605123541603.3.azuredatabricks.net
+  preview:
+    mode: production
+    variables:
+      catalog_name: main
+      schema_name: gh_lakehouse_preview
+    workspace:
+      host: https://adb-7405605123541603.3.azuredatabricks.net
+  prod:
+    mode: production
+    variables:
+      catalog_name: ${var.domain_name}
+      schema_name: gh_lakehouse
+    workspace:
+      host: https://adb-7405605123541603.3.azuredatabricks.net
