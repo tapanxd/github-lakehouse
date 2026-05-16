@@ -9,7 +9,7 @@ resources:
       photon: false
       clusters:
         - label: default
-          policy_id: 0019E1472C1F24A0
+          node_type_id: Standard_DS3_v2
           num_workers: 0
           spark_conf:
             spark.databricks.cluster.profile: singleNode
