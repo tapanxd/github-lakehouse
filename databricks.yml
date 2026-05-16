@@ -19,7 +19,7 @@ variables:
     description: The git repository for the deployed asset.
   git_ref_name:
     description: The git ref_name for the deployed asset.
-    default: main
+    default: https://github.com/tapan/github-lakehouse
 
 targets:
   dev:
