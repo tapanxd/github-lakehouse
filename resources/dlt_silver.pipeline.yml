@@ -26,4 +26,3 @@ resources:
         dltparam.environment: ${bundle.target}
         dltparam.bronze_path: abfss://bronze@ghlakehousestorage.dfs.core.windows.net/gh_events
         dltparam.silver_path: abfss://silver@ghlakehousestorage.dfs.core.windows.net/
- 
