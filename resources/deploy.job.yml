@@ -44,13 +44,13 @@ resources:
           pipeline_task:
             pipeline_id: ${resources.pipelines.dlt_gold.id}
 
-        # - task_key: cost_monitor
-        #   job_cluster_key: main_cluster
-        #   depends_on:
-        #     - task_key: gold_dlt
-        #   max_retries: 0
-        #   notebook_task:
-        #     notebook_path: ../src/cost_monitor/alert.py
+        - task_key: cost_monitor
+          job_cluster_key: main_cluster
+          depends_on:
+            - task_key: gold_dlt
+          max_retries: 0
+          notebook_task:
+            notebook_path: ../src/cost_monitor/alert.py
 
       parameters:
         - name: environment
