@@ -4,6 +4,7 @@ resources:
       name: ${bundle.name}_silver_${bundle.target}
       catalog: github_lakehouse_ws
       schema: gh_lakehouse
+      serverless: true
       continuous: false
       channel: CURRENT
       photon: false
