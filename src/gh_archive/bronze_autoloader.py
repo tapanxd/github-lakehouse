@@ -1,3 +1,6 @@
+# Databricks notebook source
+
+# COMMAND ---------- 
 """
 Bronze layer: Auto Loader ingestion from raw GH Archive files into Delta.
 Reads JSON files from the raw container and writes to bronze as Delta,

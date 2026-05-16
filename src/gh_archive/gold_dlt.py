@@ -1,3 +1,7 @@
+# Databricks notebook source
+
+# COMMAND ---------- 
+
 """
 Gold layer: DLT pipeline that produces aggregated analytics tables
 from Silver GH Archive events.

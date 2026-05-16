@@ -1,3 +1,7 @@
+# Databricks notebook source
+
+# COMMAND ---------- 
+
 """
 Silver layer: DLT pipeline that cleans and flattens Bronze GH Archive events.
 Applies data quality expectations and filters invalid records.
