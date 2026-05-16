@@ -5,7 +5,7 @@ adding metadata columns for ingestion tracking.
 """
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import current_timestamp, input_file_name
+from pyspark.sql.functions import current_timestamp, col
 from pyspark.sql.types import StructType, StructField, StringType, BooleanType
 
 from imports import (
@@ -31,7 +31,7 @@ def get_bronze_stream():
         .option("cloudFiles.schemaEvolutionMode", "rescue")
         .load(RAW_PATH)
         .withColumn("_ingested_at", current_timestamp())
-        .withColumn("_source_file", input_file_name())
+        .withColumn("_source_file", col("_metadata.file_path"))
     )
 
 
