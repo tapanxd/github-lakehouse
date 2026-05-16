@@ -2,8 +2,8 @@ resources:
   pipelines:
     dlt_silver:
       name: ${bundle.name}_silver_${bundle.target}
+      catalog: github_lakehouse_ws
       schema: gh_lakehouse
-      storage: abfss://silver@ghlakehousestorage.dfs.core.windows.net/
       continuous: false
       channel: CURRENT
       photon: false
@@ -12,8 +12,11 @@ resources:
           node_type_id: Standard_DC4as_v5
           num_workers: 0
           spark_conf:
-            spark.master: "local[*, 4]"
+            spark.databricks.cluster.profile: singleNode
+            spark.master: local[*]
             fs.azure.account.key.ghlakehousestorage.dfs.core.windows.net: "{{secrets/gh-lakehouse-scope/ghlakehousestorage-key1}}"
+          custom_tags:
+            ResourceClass: SingleNode
       libraries:
         - notebook:
             path: ../src/gh_archive/silver_dlt.py
