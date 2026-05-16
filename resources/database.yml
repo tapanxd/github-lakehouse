@@ -1,5 +1,0 @@
-resources:
-  database_instances:
-    data-integrity-hub-instance:
-      name: ${var.lakebase_instance_name}
-      capacity: CU_1
