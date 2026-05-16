@@ -7,16 +7,6 @@ resources:
       continuous: false
       channel: CURRENT
       photon: false
-      clusters:
-        - label: default
-          node_type_id: Standard_DS3_v2
-          num_workers: 0
-          spark_conf:
-            spark.databricks.cluster.profile: singleNode
-            spark.master: local[*]
-            fs.azure.account.key.ghlakehousestorage.dfs.core.windows.net: "{{secrets/gh-lakehouse-scope/ghlakehousestorage-key1}}"
-          custom_tags:
-            ResourceClass: SingleNode
       libraries:
         - notebook:
             path: ../src/gh_archive/silver_dlt.py
@@ -26,3 +16,4 @@ resources:
         dltparam.environment: ${bundle.target}
         dltparam.bronze_path: abfss://bronze@ghlakehousestorage.dfs.core.windows.net/gh_events
         dltparam.silver_path: abfss://silver@ghlakehousestorage.dfs.core.windows.net/
+        spark.hadoop.fs.azure.account.key.ghlakehousestorage.dfs.core.windows.net: "{{secrets/gh-lakehouse-scope/ghlakehousestorage-key1}}"
